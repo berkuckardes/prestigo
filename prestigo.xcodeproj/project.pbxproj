@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		C060C44D2E4B7D0100C712C4 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = C060C44C2E4B7D0100C712C4 /* FirebaseAuth */; };
+		C060C44F2E4B7D0100C712C4 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = C060C44E2E4B7D0100C712C4 /* FirebaseFirestore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C060C3D92E460C0900C712C4 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,14 +32,11 @@
 		C060C3CA2E460C0500C712C4 /* prestigo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = prestigo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C060C3D82E460C0900C712C4 /* prestigoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = prestigoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C060C3E22E460C0900C712C4 /* prestigoUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = prestigoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C060C4462E4B776A00C712C4 /* prestigo-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "prestigo-Info.plist"; sourceTree = "<group>"; };
+		C060C4532E4B883200C712C4 /* prestigo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = prestigo.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C060C3CC2E460C0500C712C4 /* prestigo */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = prestigo;
-			sourceTree = "<group>";
-		};
 		C060C3DB2E460C0900C712C4 /* prestigoTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = prestigoTests;
@@ -45,6 +47,31 @@
 			path = prestigoUITests;
 			sourceTree = "<group>";
 		};
+		C060C3FB2E4618FD00C712C4 /* Features */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Features;
+			sourceTree = "<group>";
+		};
+		C060C3FC2E46190700C712C4 /* Models */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Models;
+			sourceTree = "<group>";
+		};
+		C060C3FD2E46191100C712C4 /* Components */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Components;
+			sourceTree = "<group>";
+		};
+		C060C3FE2E46192300C712C4 /* Utilities */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		C060C3FF2E46194400C712C4 /* App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = App;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -52,6 +79,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C060C44D2E4B7D0100C712C4 /* FirebaseAuth in Frameworks */,
+				C060C44F2E4B7D0100C712C4 /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,7 +104,13 @@
 		C060C3C12E460C0500C712C4 = {
 			isa = PBXGroup;
 			children = (
-				C060C3CC2E460C0500C712C4 /* prestigo */,
+				C060C4532E4B883200C712C4 /* prestigo.entitlements */,
+				C060C4462E4B776A00C712C4 /* prestigo-Info.plist */,
+				C060C3FF2E46194400C712C4 /* App */,
+				C060C3FE2E46192300C712C4 /* Utilities */,
+				C060C3FD2E46191100C712C4 /* Components */,
+				C060C3FC2E46190700C712C4 /* Models */,
+				C060C3FB2E4618FD00C712C4 /* Features */,
 				C060C3DB2E460C0900C712C4 /* prestigoTests */,
 				C060C3E52E460C0900C712C4 /* prestigoUITests */,
 				C060C3CB2E460C0500C712C4 /* Products */,
@@ -108,10 +143,16 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C060C3CC2E460C0500C712C4 /* prestigo */,
+				C060C3FB2E4618FD00C712C4 /* Features */,
+				C060C3FC2E46190700C712C4 /* Models */,
+				C060C3FD2E46191100C712C4 /* Components */,
+				C060C3FE2E46192300C712C4 /* Utilities */,
+				C060C3FF2E46194400C712C4 /* App */,
 			);
 			name = prestigo;
 			packageProductDependencies = (
+				C060C44C2E4B7D0100C712C4 /* FirebaseAuth */,
+				C060C44E2E4B7D0100C712C4 /* FirebaseFirestore */,
 			);
 			productName = prestigo;
 			productReference = C060C3CA2E460C0500C712C4 /* prestigo.app */;
@@ -195,6 +236,9 @@
 			);
 			mainGroup = C060C3C12E460C0500C712C4;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C060C44B2E4B7D0100C712C4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C060C3CB2E460C0500C712C4 /* Products */;
 			projectDirPath = "";
@@ -388,11 +432,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = prestigo/prestigo.entitlements;
+				CODE_SIGN_ENTITLEMENTS = prestigo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 57W4AF88BL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "prestigo-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -425,11 +473,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = prestigo/prestigo.entitlements;
+				CODE_SIGN_ENTITLEMENTS = prestigo.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 57W4AF88BL;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "prestigo-Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = "";
+				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -583,6 +635,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C060C44B2E4B7D0100C712C4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.1.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		C060C44C2E4B7D0100C712C4 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C060C44B2E4B7D0100C712C4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		C060C44E2E4B7D0100C712C4 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C060C44B2E4B7D0100C712C4 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = C060C3C22E460C0500C712C4 /* Project object */;
 }
