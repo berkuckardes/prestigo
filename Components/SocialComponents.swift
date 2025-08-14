@@ -63,17 +63,13 @@ struct UserAvatar: View {
 // MARK: - Activity Card
 struct ActivityCard: View {
     let activity: SocialActivity
+    let userProfile: UserProfile?
     let onLike: () -> Void
     let onComment: () -> Void
     let onShare: () -> Void
     
     @State private var isLiked = false
     @State private var showComments = false
-    
-    // Get user profile for display
-    private var userProfile: UserProfile? {
-        DemoSocialData.sampleUserProfiles.first { $0.id == activity.userId }
-    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -264,12 +260,12 @@ struct CommentsView: View {
     }
     
     private func loadComments() {
-        // For demo purposes, load sample comments
-        // TODO: Replace with actual SocialService call when ready
+        // TODO: Implement loading comments from SocialService
         isLoading = true
         
+        // For now, show empty state
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            self.comments = DemoSocialData.sampleComments
+            self.comments = []
             self.isLoading = false
         }
     }

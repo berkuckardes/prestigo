@@ -56,5 +56,27 @@ final class AuthService: ObservableObject {
         ]
         db.collection("users").document(user.uid).setData(data, merge: true)
     }
+    
+    // Create a complete user profile
+    func createUserProfile(displayName: String, bio: String? = nil, city: String? = nil) async throws {
+        guard let currentUser = Auth.auth().currentUser else {
+            throw NSError(domain: "AuthService", code: 401, userInfo: [NSLocalizedDescriptionKey: "No user signed in"])
+        }
+        
+        let db = Firestore.firestore()
+        let userProfile = UserProfile(
+            id: currentUser.uid,
+            displayName: displayName,
+            photoURL: currentUser.photoURL?.absoluteString,
+            bio: bio,
+            city: city,
+            prestigePoints: 0,
+            memberSince: Date(),
+            lastActive: Date(),
+            isVerified: false
+        )
+        
+        try await db.collection("users").document(currentUser.uid).setData(from: userProfile)
+    }
 }
 

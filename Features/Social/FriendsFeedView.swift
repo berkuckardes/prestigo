@@ -31,19 +31,19 @@ struct FriendsFeedView: View {
                 // Content based on selected tab
                 TabView(selection: $selectedTab) {
                     // Friends Feed Tab
-                    FriendsFeedTab(socialService: socialService)
+                    FriendsFeedTab(socialService: socialService, onShowAddFriends: { showAddFriends = true })
                         .tag(0)
                     
                     // Friends List Tab
-                    FriendsListTab(socialService: socialService)
+                    FriendsListTab(socialService: socialService, onShowAddFriends: { showAddFriends = true })
                         .tag(1)
                     
                     // Friend Requests Tab
-                    FriendRequestsTab(socialService: socialService)
+                    FriendRequestsTab(socialService: socialService, onShowAddFriends: { showAddFriends = true })
                         .tag(2)
                     
                     // Chats Tab
-                    ChatListView(socialService: socialService)
+                    ChatListView(socialService: socialService, onShowAddFriends: { showAddFriends = true })
                         .tag(3)
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
@@ -80,13 +80,13 @@ struct FriendsFeedView: View {
                 }
             }
             .sheet(isPresented: $showAddFriends) {
-                AddFriendsView()
+                AddFriendsView(socialService: socialService)
             }
             .sheet(isPresented: $showCheckIn) {
-                CheckInView()
+                CheckInView(socialService: socialService)
             }
             .sheet(isPresented: $showReview) {
-                ReviewView()
+                ReviewView(socialService: socialService)
             }
         }
     }
@@ -105,6 +105,8 @@ struct FriendsFeedView: View {
 // MARK: - Friends Feed Tab
 struct FriendsFeedTab: View {
     @ObservedObject var socialService: FirestoreSocialService
+    let onShowAddFriends: () -> Void
+    @State private var userProfiles: [String: UserProfile] = [:]
     
     var body: some View {
         ScrollView {
@@ -118,15 +120,14 @@ struct FriendsFeedTab: View {
                         title: "No Activities Yet",
                         message: "When your friends check in to venues or write reviews, they'll appear here.",
                         actionTitle: "Find Friends",
-                        action: {
-                            // TODO: Navigate to add friends
-                        }
+                        action: onShowAddFriends
                     )
                     .frame(height: 400)
                 } else {
                     ForEach(socialService.friendsFeed) { activity in
                         ActivityCard(
                             activity: activity,
+                            userProfile: userProfiles[activity.userId],
                             onLike: {
                                 Task {
                                     try await socialService.likeActivity(
@@ -148,12 +149,40 @@ struct FriendsFeedTab: View {
             .padding(.horizontal, 16)
             .padding(.bottom, 100) // Account for tab bar
         }
+        .onAppear {
+            loadUserProfiles()
+        }
+        .onChange(of: socialService.friendsFeed) { _ in
+            loadUserProfiles()
+        }
+    }
+    
+    private func loadUserProfiles() {
+        Task {
+            do {
+                let userIds = Array(Set(socialService.friendsFeed.map { $0.userId }))
+                let profiles = try await socialService.getUserProfiles(userIds: userIds)
+                
+                await MainActor.run {
+                    var profileDict: [String: UserProfile] = [:]
+                    for profile in profiles {
+                        if let id = profile.id {
+                            profileDict[id] = profile
+                        }
+                    }
+                    self.userProfiles = profileDict
+                }
+            } catch {
+                print("Error loading user profiles: \(error)")
+            }
+        }
     }
 }
 
 // MARK: - Friends List Tab
 struct FriendsListTab: View {
     @ObservedObject var socialService: FirestoreSocialService
+    let onShowAddFriends: () -> Void
     @State private var searchText = ""
     
     var filteredFriends: [UserProfile] {
@@ -202,9 +231,7 @@ struct FriendsListTab: View {
                         title: "No Friends Yet",
                         message: "Start connecting with people to see their activities and share your experiences.",
                         actionTitle: "Add Friends",
-                        action: {
-                            // TODO: Navigate to add friends
-                        }
+                        action: onShowAddFriends
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
@@ -291,167 +318,148 @@ struct FriendRow: View {
 // MARK: - Friend Requests Tab
 struct FriendRequestsTab: View {
     @ObservedObject var socialService: FirestoreSocialService
+    let onShowAddFriends: () -> Void
+    @State private var outgoingRequests: [UserProfile] = []
+    @State private var showOutgoing = false
     
     var body: some View {
         VStack {
             if socialService.isLoading {
                 LoadingView(message: "Loading friend requests...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if socialService.pendingRequests.isEmpty {
+            } else if socialService.pendingRequests.isEmpty && outgoingRequests.isEmpty {
                 EmptyStateView(
                     icon: "person.badge.plus",
-                    title: "No Pending Requests",
+                    title: "No Friend Requests",
                     message: "You don't have any pending friend requests at the moment.",
-                    actionTitle: nil,
-                    action: nil
+                    actionTitle: "Add Friends",
+                    action: onShowAddFriends
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(socialService.pendingRequests) { user in
-                            FriendRequestCard(
-                                user: user,
-                                onAccept: {
-                                    Task {
-                                        try await socialService.acceptFriendRequest(from: user.id ?? "")
-                                    }
-                                },
-                                onDecline: {
-                                    Task {
-                                        try await socialService.declineFriendRequest(from: user.id ?? "")
+                VStack(spacing: 16) {
+                    // Incoming Requests
+                    if !socialService.pendingRequests.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Incoming Requests")
+                                .font(.headline)
+                                .padding(.horizontal, 16)
+                            
+                            ScrollView {
+                                LazyVStack(spacing: 16) {
+                                    ForEach(socialService.pendingRequests) { user in
+                                        FriendRequestCard(
+                                            user: user,
+                                            onAccept: {
+                                                Task {
+                                                    try await socialService.acceptFriendRequest(from: user.id ?? "")
+                                                }
+                                            },
+                                            onDecline: {
+                                                Task {
+                                                    try await socialService.declineFriendRequest(from: user.id ?? "")
+                                                }
+                                            }
+                                        )
                                     }
                                 }
-                            )
+                                .padding(.horizontal, 16)
+                            }
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 100)
+                    
+                    // Outgoing Requests
+                    if !outgoingRequests.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Outgoing Requests")
+                                .font(.headline)
+                                .padding(.horizontal, 16)
+                            
+                            ScrollView {
+                                LazyVStack(spacing: 16) {
+                                    ForEach(outgoingRequests) { user in
+                                        HStack {
+                                            UserAvatar(
+                                                photoURL: user.photoURL,
+                                                displayName: user.displayName,
+                                                size: 50,
+                                                isVerified: user.isVerified
+                                            )
+                                            
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(user.displayName)
+                                                    .font(.headline)
+                                                
+                                                if let city = user.city {
+                                                    Text(city)
+                                                        .font(.subheadline)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                
+                                                Text("Request sent")
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            Button("Cancel") {
+                                                cancelOutgoingRequest(to: user.id ?? "")
+                                            }
+                                            .buttonStyle(.borderedProminent)
+                                            .controlSize(.small)
+                                            .tint(.orange)
+                                        }
+                                        .padding()
+                                        .background(Color(.systemGray6))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    }
+                                }
+                                .padding(.horizontal, 16)
+                            }
+                        }
+                    }
                 }
+                .padding(.bottom, 100)
+            }
+        }
+        .onAppear {
+            loadOutgoingRequests()
+        }
+    }
+    
+    private func loadOutgoingRequests() {
+        Task {
+            do {
+                let outgoing = try await socialService.getOutgoingFriendRequests()
+                await MainActor.run {
+                    self.outgoingRequests = outgoing
+                }
+            } catch {
+                print("Error loading outgoing requests: \(error)")
+            }
+        }
+    }
+    
+    private func cancelOutgoingRequest(to userId: String) {
+        Task {
+            do {
+                try await socialService.cancelOutgoingRequest(to: userId)
+                await MainActor.run {
+                    loadOutgoingRequests()
+                }
+            } catch {
+                print("Error canceling outgoing request: \(error)")
             }
         }
     }
 }
 
-// MARK: - Add Friends View (Placeholder)
-struct AddFriendsView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Image(systemName: "person.badge.plus")
-                    .font(.system(size: 64))
-                    .foregroundColor(.blue)
-                
-                Text("Add Friends")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Find and connect with friends to see their activities and share your experiences.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                
-                Spacer()
-                
-                Text("Coming Soon!")
-                    .font(.headline)
-                    .foregroundColor(.blue)
-            }
-            .padding(32)
-            .navigationTitle("Add Friends")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
 
-// MARK: - Check In View (Placeholder)
-struct CheckInView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundColor(.blue)
-                
-                Text("Check In")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Share your venue experiences with friends by checking in to places you visit.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                
-                Spacer()
-                
-                Text("Coming Soon!")
-                    .font(.headline)
-                    .foregroundColor(.blue)
-            }
-            .padding(32)
-            .navigationTitle("Check In")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
 
-// MARK: - Review View (Placeholder)
-struct ReviewView: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 20) {
-                Image(systemName: "star.fill")
-                    .font(.system(size: 64))
-                    .foregroundColor(.yellow)
-                
-                Text("Write Review")
-                    .font(.title2)
-                    .fontWeight(.semibold)
-                
-                Text("Share your thoughts about venues you've visited and help others discover great places.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                
-                Spacer()
-                
-                Text("Coming Soon!")
-                    .font(.headline)
-                    .foregroundColor(.blue)
-            }
-            .padding(32)
-            .navigationTitle("Write Review")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
+
+
+
 
 #Preview {
     FriendsFeedView()

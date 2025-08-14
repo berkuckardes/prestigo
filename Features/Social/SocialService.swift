@@ -48,9 +48,20 @@ final class FirestoreSocialService: SocialService, ObservableObject {
             throw SocialError.userNotAuthenticated
         }
         
-        // For demo purposes, return sample data
-        // TODO: Replace with actual Firestore queries when ready
-        let activities = DemoSocialData.sampleSocialActivities
+        // Get user's friends
+        let friends = try await getFriends()
+        let friendIds = friends.map { $0.id ?? "" }.filter { !$0.isEmpty }
+        
+        // Get social activities from friends
+        var activities: [SocialActivity] = []
+        
+        for friendId in friendIds {
+            let friendActivities = try await getSocialActivities(for: friendId)
+            activities.append(contentsOf: friendActivities)
+        }
+        
+        // Sort by creation date (newest first)
+        activities.sort { $0.createdAt > $1.createdAt }
         
         await MainActor.run {
             self.friendsFeed = activities
@@ -62,7 +73,6 @@ final class FirestoreSocialService: SocialService, ObservableObject {
     private func getSocialActivities(for userId: String) async throws -> [SocialActivity] {
         let snapshot = try await db.collection("social_activities")
             .whereField("userId", isEqualTo: userId)
-            .whereField("isPublic", isEqualTo: true)
             .order(by: "createdAt", descending: true)
             .limit(to: 20)
             .getDocuments()
@@ -78,15 +88,28 @@ final class FirestoreSocialService: SocialService, ObservableObject {
             throw SocialError.userNotAuthenticated
         }
         
-        // For demo purposes, return sample data
-        // TODO: Replace with actual Firestore queries when ready
-        let friends = DemoSocialData.sampleUserProfiles
+        let snapshot = try await db.collection("friend_relationships")
+            .whereField("userId", isEqualTo: currentUserId)
+            .whereField("status", isEqualTo: FriendRelationship.FriendStatus.accepted.rawValue)
+            .getDocuments()
         
-        await MainActor.run {
-            self.friends = friends
+        let friendIds = snapshot.documents.compactMap { doc -> String? in
+            let relationship = try? doc.data(as: FriendRelationship.self)
+            return relationship?.friendId
         }
         
-        return friends
+        var friendProfiles: [UserProfile] = []
+        for friendId in friendIds {
+            if let profile = try await fetchUserProfile(userId: friendId) {
+                friendProfiles.append(profile)
+            }
+        }
+        
+        await MainActor.run {
+            self.friends = friendProfiles
+        }
+        
+        return friendProfiles
     }
     
     func getPendingFriendRequests() async throws -> [UserProfile] {
@@ -94,15 +117,72 @@ final class FirestoreSocialService: SocialService, ObservableObject {
             throw SocialError.userNotAuthenticated
         }
         
-        // For demo purposes, return sample data
-        // TODO: Replace with actual Firestore queries when ready
-        let pendingRequests = Array(DemoSocialData.sampleUserProfiles.prefix(2)) // Show first 2 as pending
+        let snapshot = try await db.collection("friend_relationships")
+            .whereField("friendId", isEqualTo: currentUserId)
+            .whereField("status", isEqualTo: FriendRelationship.FriendStatus.pending.rawValue)
+            .getDocuments()
         
-        await MainActor.run {
-            self.pendingRequests = pendingRequests
+        let pendingUserIds = snapshot.documents.compactMap { doc -> String? in
+            let relationship = try? doc.data(as: FriendRelationship.self)
+            return relationship?.userId
         }
         
-        return pendingRequests
+        var pendingProfiles: [UserProfile] = []
+        for userId in pendingUserIds {
+            if let profile = try await fetchUserProfile(userId: userId) {
+                pendingProfiles.append(profile)
+            }
+        }
+        
+        await MainActor.run {
+            self.pendingRequests = pendingProfiles
+        }
+        
+        return pendingProfiles
+    }
+    
+    // Get outgoing friend requests (requests you've sent)
+    func getOutgoingFriendRequests() async throws -> [UserProfile] {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw SocialError.userNotAuthenticated
+        }
+        
+        let snapshot = try await db.collection("friend_relationships")
+            .whereField("userId", isEqualTo: currentUserId)
+            .whereField("status", isEqualTo: FriendRelationship.FriendStatus.pending.rawValue)
+            .getDocuments()
+        
+        let outgoingUserIds = snapshot.documents.compactMap { doc -> String? in
+            let relationship = try? doc.data(as: FriendRelationship.self)
+            return relationship?.friendId
+        }
+        
+        var outgoingProfiles: [UserProfile] = []
+        for userId in outgoingUserIds {
+            if let profile = try await fetchUserProfile(userId: userId) {
+                outgoingProfiles.append(profile)
+            }
+        }
+        
+        return outgoingProfiles
+    }
+    
+    func cancelOutgoingRequest(to userId: String) async throws {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw SocialError.userNotAuthenticated
+        }
+        
+        let snapshot = try await db.collection("friend_relationships")
+            .whereField("userId", isEqualTo: currentUserId)
+            .whereField("friendId", isEqualTo: userId)
+            .whereField("status", isEqualTo: FriendRelationship.FriendStatus.pending.rawValue)
+            .getDocuments()
+        
+        guard let document = snapshot.documents.first else {
+            throw SocialError.relationshipNotFound
+        }
+        
+        try await document.reference.delete()
     }
     
     func sendFriendRequest(to userId: String) async throws {
@@ -407,9 +487,112 @@ final class FirestoreSocialService: SocialService, ObservableObject {
     }
     
     // MARK: - Helper Methods
-    private func getUserProfile(userId: String) async throws -> UserProfile? {
+    private func fetchUserProfile(userId: String) async throws -> UserProfile? {
         let document = try await db.collection("users").document(userId).getDocument()
         return try? document.data(as: UserProfile.self)
+    }
+    
+    // Public method to get user profile
+    func getUserProfile(userId: String) async throws -> UserProfile? {
+        return try await fetchUserProfile(userId: userId)
+    }
+    
+    // Get multiple user profiles by IDs
+    func getUserProfiles(userIds: [String]) async throws -> [UserProfile] {
+        var profiles: [UserProfile] = []
+        
+        for userId in userIds {
+            if let profile = try await fetchUserProfile(userId: userId) {
+                profiles.append(profile)
+            }
+        }
+        
+        return profiles
+    }
+    
+    // Search users by name or email
+    func searchUsers(query: String) async throws -> [UserProfile] {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw SocialError.userNotAuthenticated
+        }
+        
+        // For testing purposes, return demo users if no real users found
+        let nameSnapshot = try await db.collection("users")
+            .whereField("displayName", isGreaterThanOrEqualTo: query)
+            .whereField("displayName", isLessThan: query + "z")
+            .limit(to: 20)
+            .getDocuments()
+        
+        var results: [UserProfile] = []
+        
+        // Add users found by name
+        for doc in nameSnapshot.documents {
+            if let profile = try? doc.data(as: UserProfile.self),
+               profile.id != currentUserId { // Don't show current user
+                results.append(profile)
+            }
+        }
+        
+        // If no real users found, return demo users for testing
+        if results.isEmpty {
+            results = DemoSocialData.sampleUserProfiles.filter { user in
+                user.displayName.localizedCaseInsensitiveContains(query) &&
+                user.id != currentUserId
+            }
+        }
+        
+        // Remove duplicates and limit results
+        let uniqueResults = Array(Set(results)).prefix(20)
+        return Array(uniqueResults)
+    }
+    
+    // Create test users for development/testing
+    func createTestUsers() async throws {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
+            throw SocialError.userNotAuthenticated
+        }
+        
+        let testUsers = [
+            UserProfile(
+                id: "test_user_1",
+                displayName: "Alex Johnson",
+                photoURL: "https://picsum.photos/seed/alex/200",
+                bio: "Food enthusiast and coffee lover",
+                city: "Istanbul",
+                prestigePoints: 1250,
+                memberSince: Date().addingTimeInterval(-86400 * 30), // 30 days ago
+                lastActive: Date(),
+                isVerified: true
+            ),
+            UserProfile(
+                id: "test_user_2",
+                displayName: "Sarah Chen",
+                photoURL: "https://picsum.photos/seed/sarah/200",
+                bio: "Restaurant reviewer and travel blogger",
+                city: "Istanbul",
+                prestigePoints: 890,
+                memberSince: Date().addingTimeInterval(-86400 * 45), // 45 days ago
+                lastActive: Date(),
+                isVerified: false
+            ),
+            UserProfile(
+                id: "test_user_3",
+                displayName: "Mehmet Yılmaz",
+                photoURL: "https://picsum.photos/seed/mehmet/200",
+                bio: "Local foodie and venue explorer",
+                city: "Istanbul",
+                prestigePoints: 2100,
+                memberSince: Date().addingTimeInterval(-86400 * 60), // 60 days ago
+                lastActive: Date(),
+                isVerified: true
+            )
+        ]
+        
+        for user in testUsers {
+            try await db.collection("users").document(user.id!).setData(from: user)
+        }
+        
+        print("✅ Test users created successfully!")
     }
     
     // MARK: - Chat Functionality
@@ -508,9 +691,26 @@ final class FirestoreSocialService: SocialService, ObservableObject {
     }
     
     func getChatPreview() async throws -> [ChatPreview] {
-        // For demo purposes, return sample data
-        // TODO: Replace with actual Firestore queries when ready
-        let chatPreviews = DemoSocialData.sampleChatPreviews
+        let chatRooms = try await getChatRooms()
+        var chatPreviews: [ChatPreview] = []
+        
+        for chatRoom in chatRooms {
+            if let otherUserId = chatRoom.otherParticipantId,
+               let otherUser = try await fetchUserProfile(userId: otherUserId) {
+                
+                let unreadCount = 0 // TODO: Implement unread count logic
+                
+                let preview = ChatPreview(
+                    id: chatRoom.id ?? "",
+                    otherUser: otherUser,
+                    lastMessage: chatRoom.lastMessage,
+                    unreadCount: unreadCount,
+                    lastMessageTime: chatRoom.lastMessageTime
+                )
+                
+                chatPreviews.append(preview)
+            }
+        }
         
         return chatPreviews
     }

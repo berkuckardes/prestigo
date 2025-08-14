@@ -11,6 +11,7 @@ import FirebaseAuth
 // MARK: - Chat List View
 struct ChatListView: View {
     @ObservedObject var socialService: FirestoreSocialService
+    let onShowAddFriends: () -> Void
     @State private var chatPreviews: [ChatPreview] = []
     @State private var isLoading = false
     @State private var searchText = ""
@@ -60,9 +61,7 @@ struct ChatListView: View {
                         title: "No Chats Yet",
                         message: "Start conversations with your friends to share venue experiences and recommendations.",
                         actionTitle: "Find Friends",
-                        action: {
-                            // TODO: Navigate to add friends
-                        }
+                        action: onShowAddFriends
                     )
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {

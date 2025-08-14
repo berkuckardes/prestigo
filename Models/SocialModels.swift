@@ -10,7 +10,7 @@ import FirebaseFirestore
 import FirebaseAuth // Added for Auth.auth().currentUser?.uid
 
 // MARK: - User Profile
-struct UserProfile: Identifiable, Codable {
+struct UserProfile: Identifiable, Codable, Hashable {
     @DocumentID var id: String?
     let displayName: String
     let photoURL: String?
@@ -102,7 +102,7 @@ struct Review: Identifiable, Codable {
 }
 
 // MARK: - Social Activity
-struct SocialActivity: Identifiable, Codable {
+struct SocialActivity: Identifiable, Codable, Equatable {
     @DocumentID var id: String?
     let userId: String
     let type: ActivityType
@@ -114,7 +114,7 @@ struct SocialActivity: Identifiable, Codable {
     let comments: Int
     let createdAt: Date
     
-    enum ActivityType: String, Codable, CaseIterable {
+    enum ActivityType: String, Codable, CaseIterable, Equatable {
         case checkIn = "check_in"
         case review = "review"
         case booking = "booking"
