@@ -9,13 +9,13 @@ import SwiftUI
 
 struct CustomTabsRoot: View {
     @State private var selection: Tab = .explore
-
+    
     var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 switch selection {
                 case .explore:  ExploreView()
-                case .bookings: BookingsView()
+                case .bookings: BookingsView(selectedTab: $selection)
                 case .friends:  FriendsFeedView()
                 case .profile:  ProfileView()
                 }
@@ -27,6 +27,7 @@ struct CustomTabsRoot: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 0)
         }
+        .background(Color(.systemBackground))
     }
 }
 

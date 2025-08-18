@@ -7,12 +7,30 @@
 
 import SwiftUI
 
+// MARK: - Sort Options
+enum SortOption: String, CaseIterable {
+    case `default` = "Default"
+    case rating = "Rating"
+    case name = "Name"
+    case distance = "Distance"
+    
+    var icon: String {
+        switch self {
+        case .default: return "star.circle"
+        case .rating: return "star.fill"
+        case .name: return "textformat.abc"
+        case .distance: return "location.circle"
+        }
+    }
+}
+
 struct ExploreView: View {
     @State private var query: String = ""
     @State private var selectedCategory: String?
     @State private var selectedPrestigeLevel: String?
     @State private var showListView = false
     @State private var venues: [Venue] = DummyData.venues
+    @State private var sortOption: SortOption = .default
     
     // Grid layout configuration
     private let columns = [
@@ -48,12 +66,59 @@ struct ExploreView: View {
     
     // Filter venues based on selections
     private var filteredVenues: [Venue] {
-        venues.filter { venue in
+        var filtered = venues.filter { venue in
             let categoryMatch = selectedCategory == nil || venue.category == selectedCategory
             let prestigeMatch = selectedPrestigeLevel == nil || venue.prestigeLevel == selectedPrestigeLevel
             let queryMatch = query.isEmpty || venue.name.localizedCaseInsensitiveContains(query)
             return categoryMatch && prestigeMatch && queryMatch
         }
+        
+        // Apply sorting
+        switch sortOption {
+        case .default:
+            // Keep original order (by prestige level)
+            filtered.sort { venue1, venue2 in
+                let prestigeOrder = ["gold": 3, "silver": 2, "bronze": 1]
+                let level1 = prestigeOrder[venue1.prestigeLevel.lowercased()] ?? 0
+                let level2 = prestigeOrder[venue2.prestigeLevel.lowercased()] ?? 0
+                return level1 > level2
+            }
+        case .rating:
+            // Sort by rating (highest first)
+            filtered.sort { venue1, venue2 in
+                let rating1 = getVenueRating(venue1)
+                let rating2 = getVenueRating(venue2)
+                return rating1 > rating2
+            }
+        case .name:
+            // Sort alphabetically by name
+            filtered.sort { $0.name < $1.name }
+        case .distance:
+            // Sort by distance (closest first) - placeholder for now
+            filtered.sort { venue1, venue2 in
+                let distance1 = getVenueDistance(venue1)
+                let distance2 = getVenueDistance(venue2)
+                return distance1 < distance2
+            }
+        }
+        
+        return filtered
+    }
+    
+    // Helper function to get venue rating (placeholder - would come from real data)
+    private func getVenueRating(_ venue: Venue) -> Double {
+        // Simulate different ratings based on venue properties
+        let baseRating = 4.0
+        let prestigeBonus = venue.prestigeLevel == "gold" ? 0.8 : venue.prestigeLevel == "silver" ? 0.4 : 0.0
+        let categoryBonus = venue.category == "restaurant" ? 0.3 : venue.category == "spa" ? 0.2 : 0.1
+        return min(5.0, baseRating + prestigeBonus + categoryBonus + Double.random(in: -0.2...0.2))
+    }
+    
+    // Helper function to get venue distance (placeholder - would come from real data)
+    private func getVenueDistance(_ venue: Venue) -> Double {
+        // Simulate distances based on venue location
+        let baseDistance = Double.random(in: 0.5...5.0)
+        return baseDistance
     }
     
     var body: some View {
@@ -221,6 +286,40 @@ struct ExploreView: View {
                     .clipShape(Capsule())
                     .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
+                
+                // Sort button
+                Menu {
+                    ForEach(SortOption.allCases, id: \.self) { option in
+                        Button {
+                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                                sortOption = option
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: option.icon)
+                                Text(option.rawValue)
+                                if sortOption == option {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: sortOption.icon)
+                            .font(.system(size: 16, weight: .medium))
+                        Text(sortOption.rawValue)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.orange)
+                    .clipShape(Capsule())
+                    .shadow(color: .orange.opacity(0.3), radius: 8, x: 0, y: 4)
+                }
             }
             .padding(.horizontal, 20)
             
@@ -279,13 +378,15 @@ struct ExploreView: View {
                 selectedCategory = nil
                 selectedPrestigeLevel = nil
                 query = ""
+                sortOption = .default
             }
         }
         .foregroundColor(.blue)
-        .opacity((selectedCategory != nil || selectedPrestigeLevel != nil || !query.isEmpty) ? 1.0 : 0.0)
+        .opacity((selectedCategory != nil || selectedPrestigeLevel != nil || !query.isEmpty || sortOption != .default) ? 1.0 : 0.0)
         .animation(.easeInOut(duration: 0.2), value: selectedCategory)
         .animation(.easeInOut(duration: 0.2), value: selectedPrestigeLevel)
         .animation(.easeInOut(duration: 0.2), value: query)
+        .animation(.easeInOut(duration: 0.2), value: sortOption)
     }
 }
 
