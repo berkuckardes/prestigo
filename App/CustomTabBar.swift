@@ -12,17 +12,29 @@ struct CustomTabBar: View {
     @Binding var selection: Tab
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 0) {
             ForEach(Tab.allCases, id: \.self) { tab in
                 TabButton(tab: tab, isSelected: selection == tab) {
                     selection = tab
                 }
             }
         }
-        .padding(12)
-        .background(Color.blue.opacity(0.12)) // Soft light blue
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .shadow(color: Color.blue.opacity(0.15), radius: 10, y: 4) // blue-tinted shadow
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            LinearGradient(
+                colors: [Color.blue.opacity(0.9), Color.purple.opacity(0.9)],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .shadow(color: .black.opacity(0.05), radius: 1, y: 0)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+        )
         .animation(.easeInOut(duration: 0.2), value: selection)
     }
 }
@@ -34,27 +46,28 @@ private struct TabButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
+            VStack(spacing: 6) {
                 Image(systemName: tab.systemImage)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(isSelected ? Color.blue : Color.primary.opacity(0.6))
+                    .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
+                    .foregroundColor(isSelected ? Color.white : Color.white.opacity(0.8))
+                    .scaleEffect(isSelected ? 1.15 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
 
-                if isSelected {
-                    Text(tab.title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(Color.blue)              // Soft blue text when selected
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .minimumScaleFactor(0.85)
-                        .transition(.opacity.combined(with: .move(edge: .trailing)))
-                }
+                Text(tab.title)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(isSelected ? Color.white : Color.white.opacity(0.8))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+                    .minimumScaleFactor(0.85)
+                    .opacity(isSelected ? 1.0 : 0.9)
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
             }
-            .padding(.vertical, 10)
-            .padding(.horizontal, isSelected ? 14 : 12)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, minHeight: 48)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(isSelected ? Color.blue.opacity(0.15) : Color.clear)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(isSelected ? Color.white.opacity(0.2) : Color.clear)
+                    .animation(.easeInOut(duration: 0.2), value: isSelected)
             )
             .contentShape(Rectangle())
         }

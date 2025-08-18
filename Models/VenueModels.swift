@@ -58,6 +58,66 @@ enum DummyData {
             address: "The Marmara Pera, Beyoğlu",
             coordinate: .init(latitude: 41.0334, longitude: 28.9758),
             thumbnailURL: URL(string: "https://picsum.photos/seed/mikla/600/400")
+        ),
+        Venue(
+            id: "spa1",
+            name: "Luxury Spa & Wellness",
+            category: "spa",
+            city: "Istanbul",
+            prestigeLevel: "gold",
+            address: "Beşiktaş",
+            coordinate: .init(latitude: 41.0422, longitude: 29.0083),
+            thumbnailURL: URL(string: "https://picsum.photos/seed/spa1/600/400")
+        ),
+        Venue(
+            id: "rest1",
+            name: "Bosphorus Terrace",
+            category: "restaurant",
+            city: "Istanbul",
+            prestigeLevel: "silver",
+            address: "Ortaköy",
+            coordinate: .init(latitude: 41.0473, longitude: 29.0273),
+            thumbnailURL: URL(string: "https://picsum.photos/seed/rest1/600/400")
+        ),
+        Venue(
+            id: "barber1",
+            name: "Elite Barbershop",
+            category: "barber",
+            city: "Istanbul",
+            prestigeLevel: "bronze",
+            address: "Kadıköy",
+            coordinate: .init(latitude: 40.9909, longitude: 29.0304),
+            thumbnailURL: URL(string: "https://picsum.photos/seed/barber1/600/400")
+        ),
+        Venue(
+            id: "spa2",
+            name: "Zen Garden Spa",
+            category: "spa",
+            city: "Istanbul",
+            prestigeLevel: "silver",
+            address: "Şişli",
+            coordinate: .init(latitude: 41.0602, longitude: 28.9877),
+            thumbnailURL: URL(string: "https://picsum.photos/seed/spa2/600/400")
+        ),
+        Venue(
+            id: "rest2",
+            name: "Anatolian Kitchen",
+            category: "restaurant",
+            city: "Istanbul",
+            prestigeLevel: "bronze",
+            address: "Fatih",
+            coordinate: .init(latitude: 41.0082, longitude: 28.9784),
+            thumbnailURL: URL(string: "https://picsum.photos/seed/rest2/600/400")
+        ),
+        Venue(
+            id: "barber2",
+            name: "Classic Cuts",
+            category: "barber",
+            city: "Istanbul",
+            prestigeLevel: "silver",
+            address: "Bakırköy",
+            coordinate: .init(latitude: 40.9819, longitude: 28.8772),
+            thumbnailURL: URL(string: "https://picsum.photos/seed/barber2/600/400")
         )
     ]
 }

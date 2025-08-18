@@ -24,10 +24,9 @@ struct CustomTabsRoot: View {
             .ignoresSafeArea(edges: .bottom)
 
             CustomTabBar(selection: $selection)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 0)
         }
-        .background(Color(.systemBackground))
     }
 }
 
