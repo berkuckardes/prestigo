@@ -8,136 +8,75 @@
 import SwiftUI
 
 // MARK: - Sort Options
-enum SortOption: String, CaseIterable {
-    case `default` = "Default"
-    case rating = "Rating"
-    case name = "Name"
-    case distance = "Distance"
-    
-    var icon: String {
-        switch self {
-        case .default: return "star.circle"
-        case .rating: return "star.fill"
-        case .name: return "textformat.abc"
-        case .distance: return "location.circle"
-        }
-    }
-}
+// SortOption enum is defined in VenueModels.swift
 
 struct ExploreView: View {
+    @StateObject private var venueService = VenueService()
     @State private var query: String = ""
     @State private var selectedCategory: String?
     @State private var selectedPrestigeLevel: String?
     @State private var showListView = false
-    @State private var venues: [Venue] = DummyData.venues
     @State private var sortOption: SortOption = .default
-    
+
     // Grid layout configuration
     private let columns = [
         GridItem(.fixed((UIScreen.main.bounds.width - 80) / 2), spacing: 32),
         GridItem(.fixed((UIScreen.main.bounds.width - 80) / 2), spacing: 32)
     ]
-    
+
     // Get unique categories from venues
     private var categories: [String] {
-        Array(Set(venues.map { $0.category })).sorted()
+        venueService.getCategories()
     }
-    
+
     // Get unique prestige levels from venues
     private var prestigeLevels: [String] {
-        Array(Set(venues.map { $0.prestigeLevel })).sorted { level1, level2 in
-            let prestigeOrder = ["gold": 3, "silver": 2, "bronze": 1]
-            let order1 = prestigeOrder[level1.lowercased()] ?? 0
-            let order2 = prestigeOrder[level2.lowercased()] ?? 0
-            return order1 > order2
-        }
+        venueService.getPrestigeLevels()
     }
-    
+
     // Get featured venues (top 3 by prestige level)
     private var featuredVenues: [Venue] {
-        let sortedVenues = venues.sorted { venue1, venue2 in
-            let prestigeOrder = ["gold": 3, "silver": 2, "bronze": 1]
-            let level1 = prestigeOrder[venue1.prestigeLevel.lowercased()] ?? 0
-            let level2 = prestigeOrder[venue2.prestigeLevel.lowercased()] ?? 0
-            return level1 > level2
-        }
-        return Array(sortedVenues.prefix(3))
+        venueService.getFeaturedVenues()
     }
-    
+
     // Filter venues based on selections
     private var filteredVenues: [Venue] {
-        var filtered = venues.filter { venue in
-            let categoryMatch = selectedCategory == nil || venue.category == selectedCategory
-            let prestigeMatch = selectedPrestigeLevel == nil || venue.prestigeLevel == selectedPrestigeLevel
-            let queryMatch = query.isEmpty || venue.name.localizedCaseInsensitiveContains(query)
-            return categoryMatch && prestigeMatch && queryMatch
+        let filtered = venueService.filterVenues(
+            category: selectedCategory,
+            prestigeLevel: selectedPrestigeLevel
+        )
+        
+        let searchFiltered = venueService.searchVenues(query: query)
+        let intersection = filtered.filter { venue in
+            searchFiltered.contains { $0.id == venue.id }
         }
         
-        // Apply sorting
-        switch sortOption {
-        case .default:
-            // Keep original order (by prestige level)
-            filtered.sort { venue1, venue2 in
-                let prestigeOrder = ["gold": 3, "silver": 2, "bronze": 1]
-                let level1 = prestigeOrder[venue1.prestigeLevel.lowercased()] ?? 0
-                let level2 = prestigeOrder[venue2.prestigeLevel.lowercased()] ?? 0
-                return level1 > level2
-            }
-        case .rating:
-            // Sort by rating (highest first)
-            filtered.sort { venue1, venue2 in
-                let rating1 = getVenueRating(venue1)
-                let rating2 = getVenueRating(venue2)
-                return rating1 > rating2
-            }
-        case .name:
-            // Sort alphabetically by name
-            filtered.sort { $0.name < $1.name }
-        case .distance:
-            // Sort by distance (closest first) - placeholder for now
-            filtered.sort { venue1, venue2 in
-                let distance1 = getVenueDistance(venue1)
-                let distance2 = getVenueDistance(venue2)
-                return distance1 < distance2
-            }
-        }
-        
-        return filtered
+        return venueService.sortVenues(intersection, by: sortOption)
     }
-    
-    // Helper function to get venue rating (placeholder - would come from real data)
-    private func getVenueRating(_ venue: Venue) -> Double {
-        // Simulate different ratings based on venue properties
-        let baseRating = 4.0
-        let prestigeBonus = venue.prestigeLevel == "gold" ? 0.8 : venue.prestigeLevel == "silver" ? 0.4 : 0.0
-        let categoryBonus = venue.category == "restaurant" ? 0.3 : venue.category == "spa" ? 0.2 : 0.1
-        return min(5.0, baseRating + prestigeBonus + categoryBonus + Double.random(in: -0.2...0.2))
-    }
-    
-    // Helper function to get venue distance (placeholder - would come from real data)
-    private func getVenueDistance(_ venue: Venue) -> Double {
-        // Simulate distances based on venue location
-        let baseDistance = Double.random(in: 0.5...5.0)
-        return baseDistance
-    }
-    
+
     var body: some View {
         NavigationStack {
             ZStack {
                 // Background
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // Hero Section
-                        heroSection
-                        
-                        // Filters Section
-                        filtersSection
-                        
-                        // Venues Section
-                        venuesSection
+
+                if venueService.loading {
+                    loadingView
+                } else if let errorMessage = venueService.errorMessage {
+                    errorView
+                } else {
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            // Hero Section
+                            heroSection
+
+                            // Filters Section
+                            filtersSection
+
+                            // Venues Section
+                            venuesSection
+                        }
                     }
                 }
             }
@@ -150,12 +89,64 @@ struct ExploreView: View {
                         prompt: "Search venues")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    clearFiltersButton
+                    HStack {
+                        // Test button for Firestore
+                        Button("Test DB") {
+                            venueService.seedInitialVenues()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.blue)
+                        
+                        clearFiltersButton
+                    }
                 }
+            }
+            .refreshable {
+                venueService.fetchVenues()
             }
         }
     }
-    
+
+    // MARK: - Loading View
+    private var loadingView: some View {
+        VStack(spacing: 20) {
+            ProgressView()
+                .scaleEffect(1.5)
+            
+            Text("Loading venues...")
+                .font(.headline)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    // MARK: - Error View
+    private var errorView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 50))
+                .foregroundColor(.orange)
+            
+            Text("Oops! Something went wrong")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text(venueService.errorMessage ?? "Unknown error")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+            
+            Button("Try Again") {
+                venueService.fetchVenues()
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 12)
+            .background(Color.blue)
+            .clipShape(Capsule())
+        }
+    }
+
     // MARK: - Hero Section
     private var heroSection: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -165,89 +156,95 @@ struct ExploreView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
-                
+
                 Text("Find the perfect venue for your next experience")
                     .font(.title3)
                     .foregroundColor(.secondary)
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
-            
+
             // Featured venues carousel
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 16) {
-                    ForEach(featuredVenues) { venue in
-                        FeaturedVenueCard(venue: venue)
+            if !featuredVenues.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 16) {
+                        ForEach(featuredVenues) { venue in
+                            FeaturedVenueCard(venue: venue)
+                        }
                     }
+                    .padding(.horizontal, 20)
                 }
-                .padding(.horizontal, 20)
             }
         }
         .padding(.bottom, 32)
     }
-    
+
     // MARK: - Filters Section
     private var filtersSection: some View {
         VStack(spacing: 24) {
             // Categories
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Categories")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 20)
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        FilterPill(
-                            title: "All",
-                            isSelected: selectedCategory == nil,
-                            action: { selectedCategory = nil }
-                        )
-                        
-                        ForEach(categories, id: \.self) { category in
+            if !categories.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Categories")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
                             FilterPill(
-                                title: category.capitalized,
-                                isSelected: selectedCategory == category,
-                                action: { selectedCategory = category }
+                                title: "All",
+                                isSelected: selectedCategory == nil,
+                                action: { selectedCategory = nil }
                             )
+
+                            ForEach(categories, id: \.self) { category in
+                                FilterPill(
+                                    title: category.capitalized,
+                                    isSelected: selectedCategory == category,
+                                    action: { selectedCategory = category }
+                                )
+                            }
                         }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                 }
             }
-            
+
             // Prestige Levels
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Prestige Levels")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 20)
-                
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        FilterPill(
-                            title: "All Levels",
-                            isSelected: selectedPrestigeLevel == nil,
-                            action: { selectedPrestigeLevel = nil }
-                        )
-                        
-                        ForEach(prestigeLevels, id: \.self) { level in
-                            PrestigeFilterPill(
-                                title: level.capitalized,
-                                isSelected: selectedPrestigeLevel == level,
-                                action: { selectedPrestigeLevel = level }
+            if !prestigeLevels.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Prestige Levels")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 20)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            FilterPill(
+                                title: "All Levels",
+                                isSelected: selectedPrestigeLevel == nil,
+                                action: { selectedPrestigeLevel = nil }
                             )
+
+                            ForEach(prestigeLevels, id: \.self) { level in
+                                PrestigeFilterPill(
+                                    title: level.capitalized,
+                                    isSelected: selectedPrestigeLevel == level,
+                                    action: { selectedPrestigeLevel = level }
+                                )
+                            }
                         }
+                        .padding(.horizontal, 20)
                     }
-                    .padding(.horizontal, 20)
                 }
             }
         }
         .padding(.bottom, 32)
     }
-    
+
     // MARK: - Venues Section
     private var venuesSection: some View {
         VStack(spacing: 20) {
@@ -258,14 +255,27 @@ struct ExploreView: View {
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
-                    
-                    Text("\(filteredVenues.count) venues found")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 8) {
+                        Text("\(filteredVenues.count) venues found")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                        
+                        // Data source indicator
+                        Text(venueService.isUsingRealData ? "Live Data" : "Dummy Data")
+                            .font(.caption)
+                            .foregroundColor(venueService.isUsingRealData ? .green : .orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(venueService.isUsingRealData ? Color.green.opacity(0.1) : Color.orange.opacity(0.1))
+                            )
+                    }
                 }
-                
+
                 Spacer()
-                
+
                 // View toggle button
                 Button {
                     withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
@@ -286,7 +296,7 @@ struct ExploreView: View {
                     .clipShape(Capsule())
                     .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
                 }
-                
+
                 // Sort button
                 Menu {
                     ForEach(SortOption.allCases, id: \.self) { option in
@@ -322,9 +332,11 @@ struct ExploreView: View {
                 }
             }
             .padding(.horizontal, 20)
-            
+
             // Venues display
-            if showListView {
+            if filteredVenues.isEmpty {
+                emptyStateView
+            } else if showListView {
                 listView
             } else {
                 gridView
@@ -332,7 +344,27 @@ struct ExploreView: View {
         }
         .padding(.bottom, 100)
     }
-    
+
+    // MARK: - Empty State View
+    private var emptyStateView: some View {
+        VStack(spacing: 20) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 50))
+                .foregroundColor(.secondary)
+            
+            Text("No venues found")
+                .font(.title2)
+                .fontWeight(.semibold)
+            
+            Text("Try adjusting your filters or search terms")
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 40)
+        }
+        .padding(.vertical, 60)
+    }
+
     // MARK: - List View
     private var listView: some View {
         LazyVStack(spacing: 0) {
@@ -343,7 +375,7 @@ struct ExploreView: View {
                         .padding(.vertical, 16)
                 }
                 .buttonStyle(PlainButtonStyle())
-                
+
                 if venue.id != filteredVenues.last?.id {
                     Divider()
                         .padding(.leading, 100)
@@ -357,7 +389,7 @@ struct ExploreView: View {
         .shadow(color: .black.opacity(0.08), radius: 16, x: 0, y: 8)
         .padding(.horizontal, 20)
     }
-    
+
     // MARK: - Grid View
     private var gridView: some View {
         LazyVGrid(columns: columns, spacing: 48) {
@@ -370,7 +402,7 @@ struct ExploreView: View {
         }
         .padding(.horizontal, 20)
     }
-    
+
     // MARK: - Clear Filters Button
     private var clearFiltersButton: some View {
         Button("Clear") {

@@ -13,8 +13,9 @@ struct VenueDetailView: View {
 
     init(venue: Venue) {
         self.venue = venue
+        // Use a default coordinate since Venue no longer has coordinate property
         _region = State(initialValue: MKCoordinateRegion(
-            center: venue.coordinate,
+            center: CLLocationCoordinate2D(latitude: 40.7128, longitude: -74.0060), // Default to NYC
             span: .init(latitudeDelta: 0.01, longitudeDelta: 0.01)
         ))
     }
@@ -22,7 +23,7 @@ struct VenueDetailView: View {
     var body: some View {
         ScrollView {
             // Hero image
-            AsyncImage(url: venue.thumbnailURL) { image in
+            AsyncImage(url: URL(string: venue.imageURL ?? "")) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
                 Rectangle().fill(.gray.opacity(0.2))
@@ -42,11 +43,9 @@ struct VenueDetailView: View {
                     .foregroundStyle(.secondary)
 
                 // Map
-                Map(coordinateRegion: $region, annotationItems: [venue]) { v in
-                    MapMarker(coordinate: v.coordinate)
-                }
-                .frame(height: 160)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                Map(coordinateRegion: $region)
+                    .frame(height: 160)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
 
                 // Slots
                 NavigationLink {

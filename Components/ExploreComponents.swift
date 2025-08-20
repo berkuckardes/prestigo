@@ -1,140 +1,146 @@
 import SwiftUI
 
-// MARK: - Featured Venue Card Component
+// MARK: - Featured Venue Card
 struct FeaturedVenueCard: View {
     let venue: Venue
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // Image with gradient overlay
-            ZStack(alignment: .bottomLeading) {
-                AsyncImage(url: venue.thumbnailURL) { phase in
-                    switch phase {
-                    case .empty:
-                        Rectangle()
-                            .fill(Color(.systemGray6))
-                            .overlay(
+        ZStack {
+            // Background image or placeholder
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(.systemGray6))
+                .frame(width: 280, height: 180)
+                .overlay(
+                    Group {
+                        if let imageURL = venue.imageURL, !imageURL.isEmpty {
+                            AsyncImage(url: URL(string: imageURL)) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
                                 ProgressView()
-                                    .scaleEffect(1.2)
-                                    .tint(.secondary)
-                            )
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        Rectangle()
-                            .fill(Color(.systemGray6))
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.title2)
-                                    .foregroundColor(.secondary)
-                            )
-                    @unknown default:
-                        Color(.systemGray6)
+                            }
+                        } else {
+                            Image(systemName: "photo")
+                                .font(.system(size: 40))
+                                .foregroundColor(.secondary)
+                        }
                     }
-                }
-                .frame(width: 240, height: 140)
-                .clipped()
-                
-                // Gradient overlay for better text readability
-                LinearGradient(
-                    colors: [
-                        .clear,
-                        .black.opacity(0.3),
-                        .black.opacity(0.7)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
                 )
-                .frame(width: 240, height: 140)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+            
+            // Gradient overlay
+            LinearGradient(
+                colors: [Color.black.opacity(0.7), Color.clear, Color.black.opacity(0.3)],
+                startPoint: .bottom,
+                endPoint: .top
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            
+            // Content
+            VStack(alignment: .leading, spacing: 8) {
+                Spacer()
                 
-                // Content overlay
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(venue.category.capitalized)
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                        
-                        Spacer()
-                        
-                        PrestigeBadge(level: venue.prestigeLevel)
-                            .scaleEffect(0.8)
-                    }
+                // Category badge
+                HStack {
+                    Text(venue.category.capitalized)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
                     
                     Spacer()
                     
-                    Text(venue.name)
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                    
-                    HStack {
+                    // Rating
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundColor(.yellow)
+                        Text(String(format: "%.1f", venue.rating))
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                }
+                
+                // Venue name
+                Text(venue.name)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                
+                // Location and price
+                HStack {
+                    HStack(spacing: 4) {
                         Image(systemName: "location.circle.fill")
-                            .foregroundColor(.white.opacity(0.8))
-                            .font(.caption2)
+                            .font(.caption)
                         Text(venue.city)
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.9))
-                        
-                        Spacer()
                     }
+                    .foregroundColor(.white.opacity(0.9))
+                    
+                    Spacer()
+                    
+                    Text(venue.priceRange)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
                 }
-                .padding(16)
             }
+            .padding(16)
         }
-        .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .frame(width: 280, height: 180)
         .overlay(
             RoundedRectangle(cornerRadius: 20)
-                .stroke(Color(.systemGray4), lineWidth: 1)
+                .stroke(Color(.systemGray5), lineWidth: 1)
         )
     }
 }
 
-// MARK: - Venue List Row Component
+// MARK: - Venue List Row
 struct VenueListRow: View {
     let venue: Venue
     
     var body: some View {
         HStack(spacing: 16) {
             // Venue image
-            AsyncImage(url: venue.thumbnailURL) { phase in
-                switch phase {
-                case .empty:
-                    Rectangle()
-                        .fill(Color(.systemGray6))
-                        .overlay(
-                            ProgressView()
-                                .scaleEffect(1.2)
-                                .tint(.secondary)
-                        )
-                case .success(let image):
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                case .failure:
-                    Rectangle()
-                        .fill(Color(.systemGray6))
-                        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.systemGray6))
+                .frame(width: 80, height: 80)
+                .overlay(
+                    Group {
+                        if let imageURL = venue.imageURL, !imageURL.isEmpty {
+                            AsyncImage(url: URL(string: imageURL)) { image in
+                                image
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Image(systemName: "photo")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
                             Image(systemName: "photo")
-                                .font(.title2)
+                                .font(.system(size: 24))
                                 .foregroundColor(.secondary)
-                        )
-                @unknown default:
-                    Color(.systemGray6)
-                }
-            }
-            .frame(width: 80, height: 80)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                    }
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             
-            // Venue information
+            // Venue details
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(venue.name)
@@ -146,178 +152,152 @@ struct VenueListRow: View {
                     Spacer()
                     
                     PrestigeBadge(level: venue.prestigeLevel)
+                        .scaleEffect(0.8)
                 }
                 
-                HStack(spacing: 8) {
-                    Image(systemName: categoryIcon)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text(venue.category.capitalized)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text("•")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
+                HStack(spacing: 4) {
                     Image(systemName: "location.circle.fill")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
                     Text(venue.city)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 
-                // Rating and price (placeholder)
                 HStack {
+                    // Rating
                     HStack(spacing: 4) {
                         Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
                             .font(.caption)
-                        Text("4.8")
+                            .foregroundColor(.yellow)
+                        Text(String(format: "%.1f", venue.rating))
                             .font(.caption)
                             .fontWeight(.medium)
                     }
+                    .foregroundColor(.primary)
                     
                     Spacer()
                     
-                    HStack(spacing: 2) {
-                        ForEach(0..<3, id: \.self) { index in
-                            Image(systemName: index < 2 ? "dollarsign.circle.fill" : "dollarsign.circle")
-                                .foregroundColor(index < 2 ? .green : .secondary)
-                                .font(.caption)
-                        }
-                    }
+                    // Price range
+                    Text(venue.priceRange)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color(.systemGray6))
+                        .clipShape(Capsule())
                 }
             }
+            
+            Spacer()
         }
-        .padding(.vertical, 8)
-    }
-    
-    private var categoryIcon: String {
-        switch venue.category.lowercased() {
-        case "restaurant": return "fork.knife"
-        case "barber": return "scissors"
-        case "spa": return "sparkles"
-        case "gym": return "dumbbell.fill"
-        case "salon": return "paintbrush.fill"
-        default: return "building.2"
-        }
+        .background(Color(.systemBackground))
     }
 }
 
-// MARK: - Venue Grid Card Component
+// MARK: - Venue Grid Card
 struct VenueGridCard: View {
     let venue: Venue
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 12) {
             // Image with category badge
             ZStack(alignment: .topLeading) {
-                AsyncImage(url: venue.thumbnailURL) { phase in
-                    switch phase {
-                    case .empty:
-                        Rectangle()
-                            .fill(Color(.systemGray6))
-                            .overlay(
-                                ProgressView()
-                                    .scaleEffect(1.2)
-                                    .tint(.secondary)
-                            )
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    case .failure:
-                        Rectangle()
-                            .fill(Color(.systemGray6))
-                            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(.systemGray6))
+                    .frame(height: 140)
+                    .overlay(
+                        Group {
+                            if let imageURL = venue.imageURL, !imageURL.isEmpty {
+                                AsyncImage(url: URL(string: imageURL)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    ProgressView()
+                                }
+                            } else {
                                 Image(systemName: "photo")
-                                    .font(.title2)
+                                    .font(.system(size: 32))
                                     .foregroundColor(.secondary)
-                            )
-                    @unknown default:
-                        Color(.systemGray6)
-                    }
-                }
-                .frame(height: 100)
-                .clipped()
+                            }
+                        }
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 
                 // Category badge
                 Text(venue.category.capitalized)
-                    .font(.caption2)
+                    .font(.caption)
                     .fontWeight(.medium)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
-                    .padding(8)
+                    .padding(12)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            // Content
-            VStack(alignment: .leading, spacing: 6) {
-                // Name and prestige
-                HStack(alignment: .firstTextBaseline) {
+            
+            // Venue details
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
                     Text(venue.name)
-                        .font(.subheadline)
+                        .font(.headline)
                         .fontWeight(.semibold)
                         .foregroundColor(.primary)
-                        .lineLimit(1)
-                    
-                    Spacer(minLength: 2)
-                    
-                    PrestigeBadge(level: venue.prestigeLevel)
-                        .scaleEffect(0.8)
-                }
-
-                // Location
-                HStack(spacing: 4) {
-                    Image(systemName: "location.circle.fill")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Text(venue.city)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-
-                // Rating and price
-                HStack {
-                    HStack(spacing: 2) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
-                            .font(.caption2)
-                        Text("4.8")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                    }
+                        .lineLimit(2)
                     
                     Spacer()
                     
-                    HStack(spacing: 1) {
-                        ForEach(0..<3, id: \.self) { index in
-                            Image(systemName: index < 2 ? "dollarsign.circle.fill" : "dollarsign.circle")
-                                .foregroundColor(index < 2 ? .green : .secondary)
-                                .font(.caption2)
-                        }
+                    PrestigeBadge(level: venue.prestigeLevel)
+                        .scaleEffect(0.7)
+                }
+                
+                HStack(spacing: 4) {
+                    Image(systemName: "location.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(venue.city)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+                
+                HStack {
+                    // Rating
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.caption)
+                            .foregroundColor(.yellow)
+                        Text(String(format: "%.1f", venue.rating))
+                            .font(.caption)
+                            .fontWeight(.medium)
                     }
+                    .foregroundColor(.primary)
+                    
+                    Spacer()
+                    
+                    // Price range
+                    Text(venue.priceRange)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color(.systemGray6))
+                        .clipShape(Capsule())
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
         }
+        .padding(16)
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color(.systemGray4), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color(.systemGray5), lineWidth: 1)
         )
     }
 }
 
-// PrestigeBadge is already defined in Components/PrestigeBadge.swift
+// MARK: - Filter Pills
+// FilterPill and PrestigeFilterPill are defined in ExploreView.swift
